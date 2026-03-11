@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  /* Extracted Design Theme */
+  --color-neo-bg: #181A20;         /* Deep slate dark background */
+  --color-neo-surface: #262A34;    /* Lighter slate for cards and buttons */
+  --color-neo-surface-hover: #353A47; /* Hover state for surfaces */
+  --color-neo-purple: #7C61FF;     /* Primary vibrant purple action color */
+  --color-neo-cyan: #00D1FF;       /* Vibrant cyan for highlight and player */
+  --color-neo-pink: #FFC107;       /* Golden accent color (from review stars) */
+  --color-neo-green: #00E676;      /* Success emerald green */
+  --color-neo-red: #FF5252;        /* Danger accent red */
+  
+  --color-player-move: var(--color-neo-cyan);
+  --color-bot-move: var(--color-neo-purple);
+  
+  --animate-glow: glow 2s ease-in-out infinite alternate;
+  --animate-float: float 6s ease-in-out infinite;
+  
+  @keyframes glow {
+    from {
+      box-shadow: 0 0 10px -2px var(--color-neo-cyan), 0 0 20px -2px var(--color-neo-purple);
+    }
+    to {
+      box-shadow: 0 0 20px 2px var(--color-neo-cyan), 0 0 40px 2px var(--color-neo-purple);
+    }
+  }
+
+  @keyframes float {
+    0% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+    100% {
+      transform: translateY(0px);
+    }
+  }
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--color-neo-bg);
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-google-sans), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism utilities */
+.glass {
+  background: rgba(17, 17, 17, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Keyboard key aesthetic */
+.kbd-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #222225, #1a1a1c);
+  box-shadow: 
+    4px 4px 10px #050505,
+    -3px -3px 8px #2a2a2f,
+    inset 1px 1px 2px rgba(255, 255, 255, 0.15);
+  color: var(--color-neo-cyan);
+  font-family: var(--font-google-sans), sans-serif;
+  font-weight: bold;
+  opacity: 0.4;
+  user-select: none;
+}
+
+/* Standard CSS for animations to ensure they are correctly bundled */
+@keyframes enter-letter {
+  0% {
+    opacity: 0;
+    transform: translate3d(100px, 0, 0) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.animate-enter-letter {
+  animation: enter-letter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  will-change: transform, opacity;
+}
+
