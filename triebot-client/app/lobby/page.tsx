@@ -3,7 +3,7 @@
 import React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Bot, User, Clock, Hash, Globe, Trophy } from "lucide-react"
+import { ArrowLeft, Bot, User, Clock, Hash, Globe, Trophy, Lock } from "lucide-react"
 import { useGameStore } from "@/store/use-game-store"
 import { 
   DIFFICULTY_EASY, 
@@ -219,31 +219,44 @@ export default function LobbyPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-white uppercase tracking-wider">Themed Rounds</h4>
-                      <p className="text-xs text-zinc-500">Add a specific vocabulary constraints</p>
+                      <p className="text-xs text-zinc-500">Add a specific vocabulary constraint</p>
                     </div>
                     <Switch className="data-checked:bg-neo-cyan" />
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
-                      { label: 'Default', value: THEME_DEFAULT },
-                      { label: 'Countries', value: THEME_COUNTRIES },
-                      { label: 'Animals', value: THEME_ANIMALS },
-                      { label: 'Capitals', value: THEME_CAPITALS }
+                      { label: 'Default', value: THEME_DEFAULT, locked: true },
+                      { label: 'Countries', value: THEME_COUNTRIES, locked: false },
+                      { label: 'Animals', value: THEME_ANIMALS, locked: true },
+                      { label: 'Capitals', value: THEME_CAPITALS, locked: true },
                     ].map(theme => {
+                      const isSelected = matchConfig.theme === theme.value;
                       return (
-                      <button
-                        key={theme.value}
-                        onClick={() => setMatchConfig({ theme: theme.value })}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest border transition-all ${
-                          matchConfig.theme === theme.value
-                            ? 'bg-neo-purple/20 border-neo-purple text-neo-purple'
-                            : 'bg-black/20 border-white/5 text-zinc-500 hover:border-white/10'
-                        }`}
-                      >
-                        {theme.label}
-                      </button>
-                    )})}
+                        <button
+                          key={theme.value}
+                          disabled={theme.locked}
+                          onClick={() => !theme.locked && setMatchConfig({ theme: theme.value })}
+                          className={`relative px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest border transition-all ${
+                            theme.locked
+                              ? 'bg-black/10 border-white/5 text-zinc-600 cursor-not-allowed opacity-50'
+                              : isSelected
+                                ? 'bg-neo-purple/20 border-neo-purple text-neo-purple'
+                                : 'bg-black/20 border-white/5 text-zinc-500 hover:border-white/10'
+                          }`}
+                        >
+                          {theme.locked && (
+                            <Lock size={10} className="inline-block mr-1 mb-0.5 opacity-60" />
+                          )}
+                          {theme.label}
+                          {theme.locked && (
+                            <span className="absolute -top-2 -right-2 bg-zinc-700 text-zinc-400 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full border border-white/5">
+                              Soon
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </CardContent>
