@@ -9,6 +9,7 @@ interface MatchConfig {
   theme: string;
   playerName: string;
   avatar: string;
+  difficulty: 'easy' | 'medium' | 'hard';
 }
 
 interface GameState {
@@ -53,6 +54,7 @@ export const useGameStore = create<GameState>()(
         theme: 'general',
         playerName: 'Player 1',
         avatar: 'bot-1',
+        difficulty: 'medium',
       },
       round: 1,
       totalRounds: 5,

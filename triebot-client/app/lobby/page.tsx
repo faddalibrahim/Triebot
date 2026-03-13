@@ -15,16 +15,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-const AVATARS = [
-  { id: 'bot-1', name: 'Zappy' },
-  { id: 'bot-2', name: 'Iron' },
-  { id: 'bot-3', name: 'Neon' },
-  { id: 'bot-4', name: 'Ghost' },
-  { id: 'player-1', name: 'Ace' },
-  { id: 'player-2', name: 'Rex' },
-]
+
 
 const TIMER_PRESETS = [15, 30, 45, 60]
+
+const DIFFICULTY_OPTIONS = [
+  { id: 'easy', label: 'Easy', description: 'Friendly bot, shorter words', colorClass: 'text-neo-cyan border-neo-cyan/20 bg-neo-cyan/5 hover:border-neo-cyan/40' },
+  { id: 'medium', label: 'Medium', description: 'Standard rules, fair match', colorClass: 'text-neo-purple border-neo-purple/20 bg-neo-purple/5 hover:border-neo-purple/40' },
+  { id: 'hard', label: 'Hard', description: 'Master AI, no mercy', colorClass: 'text-neo-red border-neo-red/20 bg-neo-red/5 hover:border-neo-red/40' },
+] as const
 
 export default function LobbyPage() {
   const router = useRouter()
@@ -73,32 +72,6 @@ export default function LobbyPage() {
                     onChange={(e) => setMatchConfig({ playerName: e.target.value })}
                   />
                 </div>
-
-                <div className="space-y-3">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Select Avatar</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {AVATARS.map((avatar) => (
-                      <button
-                        key={avatar.id}
-                        onClick={() => setMatchConfig({ avatar: avatar.id })}
-                        className={`relative aspect-square rounded-xl border-2 flex items-center justify-center transition-all group overflow-hidden ${
-                          matchConfig.avatar === avatar.id 
-                            ? 'border-neo-cyan bg-neo-cyan/10 ring-4 ring-neo-cyan/10' 
-                            : 'border-white/5 bg-black/40 hover:border-white/20'
-                        }`}
-                      >
-                        <Avatar size="lg" className="border-none shadow-2xl transition-transform group-hover:scale-110">
-                          <AvatarFallback className="bg-zinc-800 text-zinc-400 font-bold uppercase">
-                            {avatar.id.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        {matchConfig.avatar === avatar.id && (
-                          <div className="absolute inset-0 bg-neo-cyan/5 pointer-events-none" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
@@ -138,16 +111,40 @@ export default function LobbyPage() {
                         >
                           <Bot className="w-4 h-4 mr-2" /> Vs Triebot
                         </TabsTrigger>
-                        <TabsTrigger 
-                          value="local-multiplayer" 
-                          disabled
-                          className="rounded-lg data-active:bg-neo-purple/10 data-active:text-neo-purple transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <User className="w-4 h-4 mr-2" /> Vs Friend (Soon)
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  </div>
+                    <TabsTrigger 
+                      value="local-multiplayer" 
+                      disabled
+                      className="rounded-lg data-active:bg-neo-purple/10 data-active:text-neo-purple transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <User className="w-4 h-4 mr-2" /> Vs Friend (Soon)
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* Difficulty Selection */}
+              <div className="space-y-4">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">AI Difficulty Level</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {DIFFICULTY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      onClick={() => setMatchConfig({ difficulty: opt.id })}
+                      className={`flex items-center justify-center h-10 rounded-xl border-2 transition-all group ${
+                        matchConfig.difficulty === opt.id 
+                          ? opt.id === 'easy' ? 'border-neo-cyan bg-neo-cyan/10 text-neo-cyan ring-4 ring-neo-cyan/5' :
+                            opt.id === 'medium' ? 'border-neo-purple bg-neo-purple/10 text-neo-purple ring-4 ring-neo-purple/5' :
+                            'border-neo-red bg-neo-red/10 text-neo-red ring-4 ring-neo-red/5'
+                          : 'border-white/5 bg-black/20 text-zinc-500 hover:border-white/10'
+                      }`}
+                    >
+                      <span className="font-black uppercase italic tracking-widest text-[10px] sm:text-xs">
+                        {opt.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Round Selection */}

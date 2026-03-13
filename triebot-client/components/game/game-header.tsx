@@ -86,7 +86,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ onForfeit }) => {
       
       {/* SECTION 1: IDENTITY (Left) */}
       <Dialog>
-        <DialogTrigger render={
+        <DialogTrigger nativeButton={false} render={
           <div className="flex items-center gap-3 cursor-pointer group hover:bg-white/5 px-2 py-1 -ml-2 rounded-xl transition-all active:scale-95">
             <Avatar className="w-10 h-10 border-2 border-white/5 shadow-xl transition-transform group-hover:scale-105">
               <AvatarFallback className="bg-neo-purple text-white font-black uppercase text-sm">
@@ -155,6 +155,16 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ onForfeit }) => {
                 <span className="font-mono text-sm text-white font-black">{totalRounds} Rounds</span>
               </div>
               <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Bot Level</span>
+                <span className={cn(
+                  "font-mono text-sm font-black italic uppercase",
+                  matchConfig.difficulty === 'easy' ? 'text-neo-cyan' :
+                  matchConfig.difficulty === 'medium' ? 'text-neo-purple' : 'text-neo-red'
+                )}>
+                  {matchConfig.difficulty}
+                </span>
+              </div>
+              <div className="p-3 bg-white/5 rounded-xl border border-white/5">
                 <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Turn Limit</span>
                 <span className="font-mono text-sm text-neo-pink font-black flex items-center gap-1.5">
                   <Timer size={14} /> {matchConfig.timeLimit}s
@@ -163,10 +173,6 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ onForfeit }) => {
               <div className="p-3 bg-white/5 rounded-xl border border-white/5">
                 <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Current Focus</span>
                 <span className="font-mono text-sm text-white font-black italic uppercase">Round {round}</span>
-              </div>
-              <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Status</span>
-                <span className="font-mono text-sm text-neo-cyan font-black italic uppercase">Live</span>
               </div>
             </div>
           </div>
