@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { GameHeader } from '@/components/game/game-header';
 import { TurnIndicator } from '@/components/game/turn-indicator';
@@ -14,10 +14,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useGameStore } from '@/store/use-game-store';
 import { Trophy, AlertCircle, LogOut, ChevronRight, Check, X as IconX } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { buildGameTrie, GameTheme } from '@/lib/trie';
+import { Triebot, Difficulty } from '@/lib/triebot';
+import { PLAYING, ENDED, IDLE, OWNER_PLAYER, OWNER_BOT, CHALLENGE_TIMEOUT, CHALLENGE_WORD, CHALLENGE_BLUFF, THEME_COUNTRIES, THEME_CAPITALS, THEME_ANIMALS } from '@/lib/constants';
 
 export default function PlayPage() {
   const router = useRouter();
   const [hasHydrated, setHasHydrated] = useState(false);
+  const botRef = useRef<Triebot | null>(null);
 
   const { playMoveSound, playBotMoveSound, playSuccessSound, playErrorSound } = useSoundEffects();
   
@@ -40,6 +44,7 @@ export default function PlayPage() {
     roundWinners,
     roundResult,
     startGame,
+    matchConfig,
   } = useGameStore();
 
   // Handle Hydration
@@ -49,7 +54,7 @@ export default function PlayPage() {
 
   // Redirect if game hasn't started (Game Guard)
   useEffect(() => {
-    if (hasHydrated && gameState !== 'playing' && gameState !== 'ended') {
+    if (hasHydrated && gameState !== PLAYING && gameState !== ENDED) {
       router.replace('/lobby');
     }
   }, [hasHydrated, gameState, router]);
@@ -57,17 +62,42 @@ export default function PlayPage() {
   // Derived State
   const currentWord = moves.map(m => m.letter).join('');
 
+  // Hydrate Bot Instance
+  useEffect(() => {
+    if (gameState === PLAYING && hasHydrated && !botRef.current) {
+      botRef.current = new Triebot(matchConfig.difficulty as Difficulty, matchConfig.theme as GameTheme);
+      // Catch up bot if hydrating an active game
+      moves.forEach(m => botRef.current!.receiveMove(m.letter));
+    }
+  }, [gameState, hasHydrated, matchConfig]);
+
+  // Sync Player Moves to Bot Pointer
+  useEffect(() => {
+    if (!botRef.current) return;
+    
+    if (moves.length === 0) {
+      botRef.current.reset(); // New round
+    } else {
+      const lastMove = moves[moves.length - 1];
+      // Only sync if it was the player making the move, 
+      // the bot will pre-sync its own moves to ensure O(1) performance
+      if (lastMove.owner === OWNER_PLAYER) {
+        botRef.current.receiveMove(lastMove.letter);
+      }
+    }
+  }, [moves.length]);
+
   // Timer Effect
   useEffect(() => {
-    if (gameState !== 'playing' || (roundResult && roundResult.show)) return;
+    if (gameState !== PLAYING || (roundResult && roundResult.show)) return;
     
     if (timeLeft <= 0) {
       if (isPlayerTurn) {
         playErrorSound();
-        recordRoundResult('bot', 'timeout');
+        recordRoundResult(OWNER_BOT, CHALLENGE_TIMEOUT);
       } else {
         playSuccessSound();
-        recordRoundResult('player', 'timeout');
+        recordRoundResult(OWNER_PLAYER, CHALLENGE_TIMEOUT);
       }
       return;
     }
@@ -79,24 +109,93 @@ export default function PlayPage() {
     return () => clearInterval(timer);
   }, [gameState, timeLeft, isPlayerTurn, roundResult?.show, tickTimer, playErrorSound, playSuccessSound, recordRoundResult]);
 
-  // Handle Turn Transitions (Bot AI Mock)
+  const handleBluffCall = (initiator: typeof OWNER_PLAYER | typeof OWNER_BOT = OWNER_PLAYER) => {
+    if (roundResult?.show || moves.length === 0) return;
+    
+    const trie = buildGameTrie(matchConfig.theme as GameTheme);
+    const isValidPrefix = trie.startsWith(currentWord);
+
+    // If initiator calls bluff, they win IF the current string is NOT a valid prefix.
+    const initiatorWins = !isValidPrefix;
+    const winner = initiatorWins ? initiator : (initiator === OWNER_PLAYER ? OWNER_BOT : OWNER_PLAYER);
+    
+    // Find the word the Triebot was pursuing if it wasn't bluffing!
+    const solution = isValidPrefix ? trie.getRandomWordWithPrefix(currentWord) || undefined : undefined;
+    
+    if (winner === OWNER_PLAYER) {
+      playSuccessSound();
+      setShowConfetti(true);
+    } else {
+      playErrorSound();
+    }
+    
+    recordRoundResult(winner, CHALLENGE_BLUFF, initiator, solution);
+  };
+
+  const handleWordCall = (initiator: typeof OWNER_PLAYER | typeof OWNER_BOT = OWNER_PLAYER) => {
+    if (roundResult?.show || moves.length === 0) return;
+    
+    const trie = buildGameTrie(matchConfig.theme as GameTheme);
+    const isCompletedWord = currentWord.length >= 4 && trie.search(currentWord);
+
+    // If initiator calls word, they win IF the current string IS a completed dictionary word.
+    const initiatorWins = isCompletedWord;
+    const winner = initiatorWins ? initiator : (initiator === OWNER_PLAYER ? OWNER_BOT : OWNER_PLAYER);
+
+    if (winner === OWNER_PLAYER) {
+      playSuccessSound();
+      setShowConfetti(true);
+    } else {
+      playErrorSound();
+    }
+
+    recordRoundResult(winner, CHALLENGE_WORD, initiator);
+  };
+
+  // Bot AI Turn Execution
   useEffect(() => {
-    if (!isPlayerTurn && gameState === 'playing' && hasHydrated && !roundResult?.show) {
+    if (!isPlayerTurn && gameState === PLAYING && hasHydrated && !roundResult?.show && botRef.current) {
+      // Small timeout to simulate "thinking" and make the UI feel reactive
       const botThinkingTimeout = setTimeout(() => {
         const latestState = useGameStore.getState();
-        if (latestState.gameState !== 'playing') return;
+        if (latestState.gameState !== PLAYING || latestState.roundResult?.show) return;
 
-        const randomLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-        addMove({ letter: randomLetter, owner: 'bot' });
-        playBotMoveSound();
-        toggleTurn();
-      }, 2500);
+        const trie = buildGameTrie(matchConfig.theme as GameTheme);
+
+        // 1. Did the human complete a word? Bot instantly catches them!
+        if (currentWord.length >= 4 && trie.search(currentWord)) {
+          handleWordCall(OWNER_BOT);
+          return;
+        }
+
+        // 2. Did the human play an invalid prefix? Bot instantly calls bluff!
+        if (!trie.startsWith(currentWord)) {
+          handleBluffCall(OWNER_BOT);
+          return;
+        }
+
+        // 3. Game continues, calculate next optimal move
+        const nextChar = botRef.current!.getNextMove();
+        
+        if (nextChar) {
+          botRef.current!.receiveMove(nextChar); // O(1) local sync
+          addMove({ letter: nextChar, owner: OWNER_BOT });
+          playBotMoveSound();
+          toggleTurn();
+        } else {
+          // If the bot genuinely has no valid moves left in the dictionary (cornered)
+          // it must resign by making a random invalid letter or forcing a bluff.
+          // For Ghost, if it can't play, the word is effectively trapped.
+          // We will bluff as a fallback.
+          handleBluffCall(OWNER_BOT);
+        }
+
+      }, 1000 + Math.random() * 800); // Between 1.0s and 1.8s
 
       return () => clearTimeout(botThinkingTimeout);
     }
-  }, [isPlayerTurn, gameState, hasHydrated, roundResult?.show, addMove, playBotMoveSound, toggleTurn]);
+  }, [isPlayerTurn, gameState, hasHydrated, roundResult?.show, addMove, playBotMoveSound, toggleTurn, currentWord, matchConfig.theme]);
 
-  // Handlers
   const handleTriggerSuccess = () => {
     playSuccessSound();
     setShowConfetti(true);
@@ -105,31 +204,9 @@ export default function PlayPage() {
   const handleKeyPress = (key: string) => {
     if (!isPlayerTurn || roundResult?.show) return;
     
-    addMove({ letter: key, owner: 'player' });
+    addMove({ letter: key, owner: OWNER_PLAYER });
     playMoveSound();
     toggleTurn();
-  };
-
-  const handleBluffCall = () => {
-    // Mock logic: Player wins if word length is even
-    if (currentWord.length % 2 === 0) {
-      playSuccessSound();
-      recordRoundResult('player', 'bluff');
-    } else {
-      playErrorSound();
-      recordRoundResult('bot', 'bluff');
-    }
-  };
-
-  const handleWordCall = () => {
-    // Mock logic: Player wins if word length is odd
-    if (currentWord.length % 2 !== 0) {
-      playSuccessSound();
-      recordRoundResult('player', 'word');
-    } else {
-      playErrorSound();
-      recordRoundResult('bot', 'word');
-    }
   };
 
   const handleForfeit = () => {
@@ -147,7 +224,7 @@ export default function PlayPage() {
   }
 
 
-  if (gameState !== 'playing' && gameState !== 'ended') {
+  if (gameState !== PLAYING && gameState !== ENDED) {
     return (
       <div className="h-screen w-full bg-neo-bg flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-neo-cyan/20 border-t-neo-cyan rounded-full animate-spin" />
@@ -190,8 +267,8 @@ export default function PlayPage() {
                 {round === totalRounds ? (
                   // MATCH COMPLETE HEADER
                   (() => {
-                    const playerWins = roundWinners.filter(w => w === 'player').length;
-                    const botWins = roundWinners.filter(w => w === 'bot').length;
+                    const playerWins = roundWinners.filter(w => w === OWNER_PLAYER).length;
+                    const botWins = roundWinners.filter(w => w === OWNER_BOT).length;
                     const isVictory = playerWins > botWins;
                     const isDraw = playerWins === botWins;
 
@@ -220,10 +297,10 @@ export default function PlayPage() {
                                   className={cn(
                                     "rounded-full flex items-center justify-center border-2 transition-all duration-500",
                                     isLarge ? "w-8 h-8" : "w-7 h-7",
-                                    winner === 'player' ? "border-neo-cyan bg-neo-cyan text-black" : "border-neo-red bg-neo-red text-white"
+                                    winner === OWNER_PLAYER ? "border-neo-cyan bg-neo-cyan text-black" : "border-neo-red bg-neo-red text-white"
                                   )}
                                 >
-                                  {winner === 'player' ? 
+                                  {winner === OWNER_PLAYER ? 
                                     <Check size={isLarge ? 16 : 14} strokeWidth={4} /> : 
                                     <IconX size={isLarge ? 16 : 14} strokeWidth={4} />
                                   }
@@ -242,20 +319,53 @@ export default function PlayPage() {
                   // SINGLE ROUND RESULT HEADER
                   <>
                     <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-2 shadow-xl ${
-                      roundResult.winner === 'player' ? 'bg-neo-cyan text-black' : 'bg-neo-red text-white'
+                      roundResult.winner === OWNER_PLAYER ? 'bg-neo-cyan text-black' : 'bg-neo-red text-white'
                     }`}>
-                      {roundResult.winner === 'player' ? <Trophy size={28} /> : <AlertCircle size={28} />}
+                      {roundResult.winner === OWNER_PLAYER ? <Trophy size={28} /> : <AlertCircle size={28} />}
                     </div>
                     <DialogTitle className={`text-2xl font-black uppercase italic ${
-                      roundResult.winner === 'player' ? 'text-neo-cyan' : 'text-neo-red'
+                      roundResult.winner === OWNER_PLAYER ? 'text-neo-cyan' : 'text-neo-red'
                     }`}>
-                      {roundResult.winner === 'player' ? 'Round Won!' : 'Round Lost!'}
+                      {roundResult.winner === OWNER_PLAYER ? 'Round Won!' : 'Round Lost!'}
                     </DialogTitle>
                     <DialogDescription className="text-zinc-400">
                       <span className="block mb-2">
-                        {roundResult.type === 'timeout' && (roundResult.winner === 'bot' ? "You ran out of time!" : "Triebot was too slow!")}
-                        {roundResult.type === 'word' && (roundResult.winner === 'player' ? "You caught a complete word!" : "You claimed a word that wasn't finished!")}
-                        {roundResult.type === 'bluff' && (roundResult.winner === 'player' ? "Triebot was bluffing!" : "Triebot had a word in mind!")}
+                        {(() => {
+                          const { type, winner, initiator, solution } = roundResult;
+                          const themeDesc = matchConfig.theme === THEME_COUNTRIES ? 'country' : 
+                                            matchConfig.theme === THEME_CAPITALS ? 'capital' : 
+                                            matchConfig.theme === THEME_ANIMALS ? 'animal' : 'dictionary word';
+                          const prefix = currentWord.toUpperCase();
+                          
+                          if (type === CHALLENGE_TIMEOUT) {
+                            return winner === OWNER_BOT ? "You ran out of time!" : "Triebot was too slow!";
+                          }
+                          
+                          if (type === CHALLENGE_WORD) {
+                            if (initiator === OWNER_PLAYER) {
+                              return winner === OWNER_PLAYER 
+                                ? `You caught Triebot completing a valid ${themeDesc}: "${prefix}"!` 
+                                : `You falsely claimed "${prefix}" was a finished ${themeDesc}!`;
+                            } else {
+                              return winner === OWNER_BOT 
+                                ? `Triebot caught you completing a valid ${themeDesc}: "${prefix}"!` 
+                                : `Triebot falsely claimed "${prefix}" was a finished ${themeDesc}!`;
+                            }
+                          }
+                          
+                          if (type === CHALLENGE_BLUFF) {
+                            if (initiator === OWNER_PLAYER) {
+                              return winner === OWNER_PLAYER
+                                ? `You correctly caught Triebot's bluff! No valid ${themeDesc} starts with "${prefix}".`
+                                : `Triebot wasn't bluffing! It was going for: "${solution?.toUpperCase()}"`;
+                            } else {
+                              return winner === OWNER_BOT
+                                ? `You played an invalid prefix! No valid ${themeDesc} starts with "${prefix}".`
+                                : `Triebot falsely called your bluff! You could have formed: "${solution?.toUpperCase()}"`;
+                            }
+                          }
+                          return "Round concluded.";
+                        })()}
                       </span>
                       <span className="text-xs font-mono uppercase tracking-tighter opacity-60">
                         {totalRounds - round} {totalRounds - round === 1 ? 'round' : 'rounds'} remaining

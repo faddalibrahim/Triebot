@@ -1,10 +1,11 @@
 import React, { useRef } from 'react';
 
 import { useGameStore } from "@/store/use-game-store";
+import { OWNER_PLAYER, OWNER_BOT } from "@/lib/constants";
 
 export interface Move {
   letter: string;
-  owner: 'player' | 'bot';
+  owner: typeof OWNER_PLAYER | typeof OWNER_BOT;
 }
 
 export const WordFragment: React.FC = () => {
@@ -18,8 +19,8 @@ export const WordFragment: React.FC = () => {
         {moves.map((move, idx) => (
           <div 
             key={`${idx}-${move.letter}-${move.owner}`} 
-            className={`w-10 h-14 md:w-16 md:h-20 bg-neo-surface border border-white/10 rounded-lg flex items-center justify-center text-2xl md:text-5xl font-black shadow-lg hover:-translate-y-1 transition-transform animate-enter-letter ${
-              move.owner === 'player' ? 'text-player-move' : 'text-bot-move'
+            className={`w-10 h-14 md:w-16 md:h-20 bg-neo-surface border border-white/10 rounded-lg flex items-center justify-center text-2xl md:text-5xl font-black uppercase shadow-lg hover:-translate-y-1 transition-transform animate-enter-letter ${
+              move.owner === OWNER_PLAYER ? 'text-player-move' : 'text-bot-move'
             }`}
           >
             {move.letter}

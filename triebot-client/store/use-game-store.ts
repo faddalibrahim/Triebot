@@ -1,15 +1,31 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Move } from '@/components/game/word-fragment';
+import { 
+  PLAYING, 
+  ENDED, 
+  IDLE, 
+  OWNER_PLAYER, 
+  OWNER_BOT, 
+  CHALLENGE_TIMEOUT, 
+  CHALLENGE_WORD, 
+  CHALLENGE_BLUFF,
+  MODE_TRIEBOT,
+  MODE_MULTIPLAYER,
+  DIFFICULTY_EASY,
+  DIFFICULTY_MEDIUM,
+  DIFFICULTY_HARD,
+  THEME_DEFAULT
+} from '@/lib/constants';
 
 interface MatchConfig {
-  mode: 'vs-triebot' | 'local-multiplayer';
+  mode: typeof MODE_TRIEBOT | typeof MODE_MULTIPLAYER;
   rounds: number;
   timeLimit: number;
   theme: string;
   playerName: string;
   avatar: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: typeof DIFFICULTY_EASY | typeof DIFFICULTY_MEDIUM | typeof DIFFICULTY_HARD;
 }
 
 interface GameState {
@@ -20,13 +36,15 @@ interface GameState {
   timeLeft: number;
   isPlayerTurn: boolean;
   moves: Move[];
-  gameState: 'idle' | 'playing' | 'ended';
+  gameState: typeof IDLE | typeof PLAYING | typeof ENDED;
   showConfetti: boolean;
-  roundWinners: ('player' | 'bot' | null)[];
+  roundWinners: (typeof OWNER_PLAYER | typeof OWNER_BOT | null)[];
   roundResult: { 
     show: boolean; 
-    type: 'timeout' | 'word' | 'bluff'; 
-    winner: 'player' | 'bot';
+    type: typeof CHALLENGE_TIMEOUT | typeof CHALLENGE_WORD | typeof CHALLENGE_BLUFF; 
+    winner: typeof OWNER_PLAYER | typeof OWNER_BOT;
+    initiator?: typeof OWNER_PLAYER | typeof OWNER_BOT;
+    solution?: string;
   } | null;
 
   // Actions
@@ -38,8 +56,13 @@ interface GameState {
   nextRound: () => void;
   setShowConfetti: (show: boolean) => void;
   resetGame: () => void;
-  setGameState: (state: 'idle' | 'playing' | 'ended') => void;
-  recordRoundResult: (winner: 'player' | 'bot', type: 'timeout' | 'word' | 'bluff') => void;
+  setGameState: (state: typeof IDLE | typeof PLAYING | typeof ENDED) => void;
+  recordRoundResult: (
+    winner: typeof OWNER_PLAYER | typeof OWNER_BOT, 
+    type: typeof CHALLENGE_TIMEOUT | typeof CHALLENGE_WORD | typeof CHALLENGE_BLUFF, 
+    initiator?: typeof OWNER_PLAYER | typeof OWNER_BOT, 
+    solution?: string
+  ) => void;
   clearRoundResult: () => void;
 }
 
@@ -48,13 +71,13 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
       // Initial State
       matchConfig: {
-        mode: 'vs-triebot',
+        mode: MODE_TRIEBOT,
         rounds: 5,
         timeLimit: 30,
-        theme: 'general',
+        theme: THEME_DEFAULT,
         playerName: 'Player 1',
         avatar: 'bot-1',
-        difficulty: 'medium',
+        difficulty: DIFFICULTY_MEDIUM,
       },
       round: 1,
       totalRounds: 5,
@@ -62,7 +85,7 @@ export const useGameStore = create<GameState>()(
       isPlayerTurn: true,
       moves: [],
       isGameOver: false,
-      gameState: 'idle',
+      gameState: IDLE,
       showConfetti: false,
       roundWinners: [],
       roundResult: null,
@@ -77,7 +100,7 @@ export const useGameStore = create<GameState>()(
       startGame: () => {
         const { matchConfig } = get();
         set({ 
-          gameState: 'playing', 
+          gameState: PLAYING, 
           moves: [], 
           round: 1, 
           timeLeft: matchConfig.timeLimit, 
@@ -109,11 +132,11 @@ export const useGameStore = create<GameState>()(
             round: round + 1,
             moves: [],
             timeLeft: matchConfig.timeLimit,
-            isPlayerTurn: roundResult?.winner === 'bot', // Loser starts!
+            isPlayerTurn: roundResult?.winner === OWNER_BOT, // Loser starts!
             roundResult: null,
           });
         } else {
-          set({ gameState: 'ended' });
+          set({ gameState: ENDED });
         }
       },
 
@@ -121,19 +144,19 @@ export const useGameStore = create<GameState>()(
 
       setGameState: (state) => set({ gameState: state }),
 
-      recordRoundResult: (winner, type) => set((state) => {
+      recordRoundResult: (winner, type, initiator, solution) => set((state) => {
         const newWinners = [...state.roundWinners];
         newWinners[state.round - 1] = winner;
         
         // Auto confetti on match victory
-        const playerWins = newWinners.filter(w => w === 'player').length;
-        const botWins = newWinners.filter(w => w === 'bot').length;
+        const playerWins = newWinners.filter(w => w === OWNER_PLAYER).length;
+        const botWins = newWinners.filter(w => w === OWNER_BOT).length;
         const isLastRound = state.round === state.totalRounds;
         const autoConfetti = isLastRound && playerWins > botWins;
 
         return { 
           roundWinners: newWinners,
-          roundResult: { show: true, type, winner },
+          roundResult: { show: true, type, winner, initiator, solution },
           showConfetti: autoConfetti || state.showConfetti
         };
       }),
@@ -145,7 +168,7 @@ export const useGameStore = create<GameState>()(
         timeLeft: state.matchConfig.timeLimit,
         isPlayerTurn: true,
         moves: [],
-        gameState: 'idle',
+        gameState: IDLE,
         showConfetti: false,
         roundWinners: [],
         roundResult: null,

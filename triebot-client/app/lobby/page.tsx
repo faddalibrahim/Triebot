@@ -5,6 +5,17 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Bot, User, Clock, Hash, Globe, Trophy } from "lucide-react"
 import { useGameStore } from "@/store/use-game-store"
+import { 
+  DIFFICULTY_EASY, 
+  DIFFICULTY_MEDIUM, 
+  DIFFICULTY_HARD, 
+  THEME_DEFAULT, 
+  THEME_COUNTRIES, 
+  THEME_ANIMALS, 
+  THEME_CAPITALS,
+  MODE_TRIEBOT,
+  MODE_MULTIPLAYER
+} from "@/lib/constants"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,9 +31,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 const TIMER_PRESETS = [15, 30, 45, 60]
 
 const DIFFICULTY_OPTIONS = [
-  { id: 'easy', label: 'Easy', description: 'Friendly bot, shorter words', colorClass: 'text-neo-cyan border-neo-cyan/20 bg-neo-cyan/5 hover:border-neo-cyan/40' },
-  { id: 'medium', label: 'Medium', description: 'Standard rules, fair match', colorClass: 'text-neo-purple border-neo-purple/20 bg-neo-purple/5 hover:border-neo-purple/40' },
-  { id: 'hard', label: 'Hard', description: 'Master AI, no mercy', colorClass: 'text-neo-red border-neo-red/20 bg-neo-red/5 hover:border-neo-red/40' },
+  { id: DIFFICULTY_EASY, label: 'Easy', description: 'Friendly bot, shorter words', colorClass: 'text-neo-cyan border-neo-cyan/20 bg-neo-cyan/5 hover:border-neo-cyan/40' },
+  { id: DIFFICULTY_MEDIUM, label: 'Medium', description: 'Standard rules, fair match', colorClass: 'text-neo-purple border-neo-purple/20 bg-neo-purple/5 hover:border-neo-purple/40' },
+  { id: DIFFICULTY_HARD, label: 'Hard', description: 'Master AI, no mercy', colorClass: 'text-neo-red border-neo-red/20 bg-neo-red/5 hover:border-neo-red/40' },
 ] as const
 
 export default function LobbyPage() {
@@ -106,13 +117,13 @@ export default function LobbyPage() {
                     >
                       <TabsList className="grid w-full grid-cols-2 h-12 bg-black/40 border-white/5 p-1 rounded-xl">
                         <TabsTrigger 
-                          value="vs-triebot" 
+                          value={MODE_TRIEBOT} 
                           className="rounded-lg data-active:bg-neo-cyan/10 data-active:text-neo-cyan transition-all"
                         >
                           <Bot className="w-4 h-4 mr-2" /> Vs Triebot
                         </TabsTrigger>
                     <TabsTrigger 
-                      value="local-multiplayer" 
+                      value={MODE_MULTIPLAYER} 
                       disabled
                       className="rounded-lg data-active:bg-neo-purple/10 data-active:text-neo-purple transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     >
@@ -132,8 +143,8 @@ export default function LobbyPage() {
                       onClick={() => setMatchConfig({ difficulty: opt.id })}
                       className={`flex items-center justify-center h-10 rounded-xl border-2 transition-all group ${
                         matchConfig.difficulty === opt.id 
-                          ? opt.id === 'easy' ? 'border-neo-cyan bg-neo-cyan/10 text-neo-cyan ring-4 ring-neo-cyan/5' :
-                            opt.id === 'medium' ? 'border-neo-purple bg-neo-purple/10 text-neo-purple ring-4 ring-neo-purple/5' :
+                          ? opt.id === DIFFICULTY_EASY ? 'border-neo-cyan bg-neo-cyan/10 text-neo-cyan ring-4 ring-neo-cyan/5' :
+                            opt.id === DIFFICULTY_MEDIUM ? 'border-neo-purple bg-neo-purple/10 text-neo-purple ring-4 ring-neo-purple/5' :
                             'border-neo-red bg-neo-red/10 text-neo-red ring-4 ring-neo-red/5'
                           : 'border-white/5 bg-black/20 text-zinc-500 hover:border-white/10'
                       }`}
@@ -214,19 +225,25 @@ export default function LobbyPage() {
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {['General', 'Countries', 'Animals', 'Cities'].map(theme => (
+                    {[
+                      { label: 'Default', value: THEME_DEFAULT },
+                      { label: 'Countries', value: THEME_COUNTRIES },
+                      { label: 'Animals', value: THEME_ANIMALS },
+                      { label: 'Capitals', value: THEME_CAPITALS }
+                    ].map(theme => {
+                      return (
                       <button
-                        key={theme}
-                        onClick={() => setMatchConfig({ theme: theme.toLowerCase() })}
+                        key={theme.value}
+                        onClick={() => setMatchConfig({ theme: theme.value })}
                         className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest border transition-all ${
-                          matchConfig.theme === theme.toLowerCase()
+                          matchConfig.theme === theme.value
                             ? 'bg-neo-purple/20 border-neo-purple text-neo-purple'
                             : 'bg-black/20 border-white/5 text-zinc-500 hover:border-white/10'
                         }`}
                       >
-                        {theme}
+                        {theme.label}
                       </button>
-                    ))}
+                    )})}
                   </div>
                 </div>
               </CardContent>

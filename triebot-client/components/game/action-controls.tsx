@@ -27,6 +27,7 @@ import { RulesContent } from './rules-content';
 import { cn } from '@/lib/utils';
 
 import { useGameStore } from '@/store/use-game-store';
+import { OWNER_PLAYER, OWNER_BOT } from '@/lib/constants';
 
 interface ActionControlsProps {
   onCallBluff: () => void;
@@ -51,19 +52,15 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
 
   const currentWord = moves.map(m => m.letter).join('');
 
-  // Mock success state for demonstration
-  const isCorrect = currentWord.length % 2 === 0;
 
   const handleCallBluff = () => {
     onCallBluff();
     setIsBluffOpen(false); // Close drawer immediately
-    if (isCorrect) playSuccessSound(); else playErrorSound();
   };
 
   const handleCallWord = () => {
     onCallWord();
     setIsWordOpen(false); // Close drawer immediately
-    if (isCorrect) playSuccessSound(); else playErrorSound();
   };
 
   return (
@@ -96,7 +93,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
                 <Zap className="text-neo-cyan" /> CHALLENGE BLUFF
               </DrawerTitle>
               <DrawerDescription className="text-zinc-400">
-                You are challenging the last move. If no word can be formed starting with <span className="text-white font-mono">"{currentWord}"</span>, you win the round!
+                You are challenging the last move. If no word can be formed starting with <span className="text-white font-mono uppercase">"{currentWord}"</span>, you win the round!
               </DrawerDescription>
             </DrawerHeader>
             <div className="p-4 bg-neo-surface/50 rounded-xl border border-white/5 mt-4">
@@ -139,7 +136,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
                 <Target className="text-neo-pink" /> CALL WORD
               </DrawerTitle>
               <DrawerDescription className="text-zinc-400">
-                Are you claiming that <span className="text-white font-mono">"{currentWord}"</span> is a complete valid word?
+                Are you claiming that <span className="text-white font-mono uppercase">"{currentWord}"</span> is a complete valid word?
               </DrawerDescription>
             </DrawerHeader>
             <div className="p-4 bg-neo-surface/50 rounded-xl border border-white/5 mt-4">

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useGameStore } from "@/store/use-game-store";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OWNER_PLAYER, OWNER_BOT, DIFFICULTY_EASY, DIFFICULTY_MEDIUM, DIFFICULTY_HARD } from "@/lib/constants";
 
 interface GameHeaderProps {
   onForfeit: () => void;
@@ -66,13 +67,13 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ onForfeit }) => {
                 "rounded-full flex items-center justify-center border-2 transition-all duration-500",
                 config.dot,
                 isCurrent ? "border-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.3)] animate-pulse" :
-                winner === 'player' ? "border-neo-cyan bg-neo-cyan text-black" :
-                winner === 'bot' ? "border-neo-red bg-neo-red text-white" :
+                winner === OWNER_PLAYER ? "border-neo-cyan bg-neo-cyan text-black" :
+                winner === OWNER_BOT ? "border-neo-red bg-neo-red text-white" :
                 "border-white/10 bg-white/5"
               )}
             >
-              {winner === 'player' && <Check size={config.icon} strokeWidth={4} />}
-              {winner === 'bot' && <IconX size={config.icon} strokeWidth={4} />}
+              {winner === OWNER_PLAYER && <Check size={config.icon} strokeWidth={4} />}
+              {winner === OWNER_BOT && <IconX size={config.icon} strokeWidth={4} />}
               {!winner && !isCurrent && <div className={cn("rounded-full bg-white/20", config.dotSize)} />}
             </div>
           );
@@ -126,7 +127,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ onForfeit }) => {
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="text-xs font-black text-neo-cyan italic">{roundWinners.filter(w => w === 'player').length}W</span>
+                    <span className="text-xs font-black text-neo-cyan italic">{roundWinners.filter(w => w === OWNER_PLAYER).length}W</span>
                   </div>
                 </div>
 
@@ -142,7 +143,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ onForfeit }) => {
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="text-xs font-black text-neo-red italic">{roundWinners.filter(w => w === 'bot').length}W</span>
+                    <span className="text-xs font-black text-neo-red italic">{roundWinners.filter(w => w === OWNER_BOT).length}W</span>
                   </div>
                 </div>
               </div>
@@ -158,8 +159,8 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ onForfeit }) => {
                 <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold block mb-1">Bot Level</span>
                 <span className={cn(
                   "font-mono text-sm font-black italic uppercase",
-                  matchConfig.difficulty === 'easy' ? 'text-neo-cyan' :
-                  matchConfig.difficulty === 'medium' ? 'text-neo-purple' : 'text-neo-red'
+                  matchConfig.difficulty === DIFFICULTY_EASY ? 'text-neo-cyan' :
+                  matchConfig.difficulty === DIFFICULTY_MEDIUM ? 'text-neo-purple' : 'text-neo-red'
                 )}>
                   {matchConfig.difficulty}
                 </span>
